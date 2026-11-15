@@ -62,7 +62,7 @@ Use plan.py board --fix for structural columns and plan.py set for status/notes.
 | T21 | agent | Observed hotspot recurrence by eligible season | Sattyam | T07, T53, T58 | todo |  |
 | T22 | agent | Evidence-bearing planner brief in English | Shammo | T08, T58, T60 | todo |  |
 | H06 | human | Sheikh: observe intended users and provide anonymized task evidence | Sheikh | T61, T60, T22 | todo | Requires actual intended-user observations; no simulated participant evidence. |
-| T33 | agent | Download MODIS burned-area tiles (MCD64A1) with the Earthdata token | Sheikh | T51 | todo |  |
+| T33 | agent | Download MODIS burned-area tiles (MCD64A1) with the Earthdata token | Sheikh | T51 | review | 108-granule predeclared Dhaka/Punjab sample acquired and reconciled across three tiles; 451,656,759 bytes with per-file SHA256, HDF4 and size checks. `scripts/tests/test_get_mcd64a1.py` pending final plan check. Local raw data/run receipt excluded from Git. |
 | T24 | agent | Corroborating burned-area and timing check with MCD64A1 | Samin | T33, T53, T58 | todo |  |
 | T23 | agent | Story mode (90-second guided tour for judges and the video) | Shammo | T08, T12, T22, T58, T60 | todo |  |
 | T27 | agent | Current-interface QA: strings, payload budgets and sourced numbers | Shammo | T58, T60, T22 | todo |  |
