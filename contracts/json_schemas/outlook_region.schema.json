@@ -1,0 +1,171 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "outlook_region",
+  "description": "One file for all regions, keyed by admin1_id (decision 20). The API returns one region's entry, plus region_id and region_name.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "generated_at",
+    "regions"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string"
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "regions": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/region_outlook"
+      }
+    }
+  },
+  "definitions": {
+    "region_outlook": {
+      "type": "object",
+      "required": [
+        "region_name",
+        "as_of",
+        "season_to_date_percentile",
+        "expected_range",
+        "skill",
+        "status",
+        "alert",
+        "current_status"
+      ],
+      "properties": {
+        "region_name": {
+          "type": "string"
+        },
+        "as_of": {
+          "type": "string",
+          "format": "date"
+        },
+        "season_to_date_percentile": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Null when the season so far is not fully observed or has no comparable earlier seasons"
+        },
+        "expected_range": {
+          "type": "object",
+          "required": [
+            "q10",
+            "q50",
+            "q90"
+          ],
+          "properties": {
+            "q10": {
+              "type": "number"
+            },
+            "q50": {
+              "type": "number"
+            },
+            "q90": {
+              "type": "number"
+            }
+          }
+        },
+        "skill": {
+          "type": "object",
+          "properties": {
+            "vs_climatology": {
+              "type": "number"
+            },
+            "vs_persistence": {
+              "type": "number"
+            },
+            "ci": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "n_seasons": {
+              "type": "integer"
+            }
+          }
+        },
+        "status": {
+          "enum": [
+            "skill",
+            "no_demonstrated_skill"
+          ]
+        },
+        "alert": {
+          "type": "object",
+          "properties": {
+            "level": {
+              "enum": [
+                "none",
+                "watch",
+                "high"
+              ]
+            },
+            "rule": {
+              "type": "string"
+            }
+          }
+        },
+        "current_status": {
+          "type": "object",
+          "properties": {
+            "week_percentile": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "level": {
+              "enum": [
+                "very_low",
+                "low",
+                "none",
+                "watch",
+                "high",
+                "insufficient_history",
+                "incomplete_coverage"
+              ]
+            },
+            "data_through": {
+              "type": "string",
+              "format": "date"
+            },
+            "message": {
+              "type": "string"
+            },
+            "data_source": {
+              "enum": [
+                "observed_viirs",
+                "adjusted_from_noaa20",
+                "modeled_from_modis",
+                "mixed",
+                "harmonized",
+                "VIIRS_NOAA20_NRT",
+                "VIIRS_NOAA21_NRT"
+              ]
+            }
+          },
+          "required": [
+            "week_percentile",
+            "level",
+            "data_through",
+            "message"
+          ]
+        },
+        "season_to_date_status": {
+          "enum": [
+            "ok",
+            "insufficient_history",
+            "incomplete_coverage"
+          ]
+        }
+      }
+    }
+  }
+}

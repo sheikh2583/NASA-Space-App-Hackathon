@@ -1,0 +1,197 @@
+{
+  "_note": "Column: type. Files live in data/processed/. Allowed values for string columns are in _enums. grid_daily is sparse and keyed by (cell_id, date, sat): a missing row means zero detections only on days sensor_days says that satellite was operating. grid_daily.date is the local solar date (decision 23); detections.acq_date is UTC. cell_id follows decision 22.",
+  "_enums": {
+    "detections.sensor": [
+      "MODIS",
+      "VIIRS"
+    ],
+    "detections.sat": [
+      "Terra",
+      "Aqua",
+      "SNPP",
+      "NOAA20",
+      "NOAA21"
+    ],
+    "grid_daily.sensor": [
+      "MODIS",
+      "VIIRS"
+    ],
+    "grid_daily.sat": [
+      "Terra",
+      "Aqua",
+      "SNPP",
+      "NOAA20",
+      "NOAA21"
+    ],
+    "sensor_days.sat": [
+      "Terra",
+      "Aqua",
+      "SNPP",
+      "NOAA20",
+      "NOAA21"
+    ],
+    "detections.daynight": [
+      "D",
+      "N"
+    ],
+    "harmonized.source": [
+      "observed_viirs",
+      "adjusted_from_noaa20",
+      "modeled_from_modis",
+      "mixed"
+    ],
+    "predictions_oof.split": [
+      "train",
+      "calib",
+      "test"
+    ],
+    "predictions_oof.sat_combo": [
+      "terra_only",
+      "terra_aqua"
+    ]
+  },
+  "_keys": {
+    "grid_daily": [
+      "cell_id",
+      "date",
+      "sat"
+    ],
+    "coverage_days": [
+      "sat",
+      "region",
+      "date"
+    ],
+    "sensor_days": [
+      "date",
+      "sat"
+    ],
+    "harmonized": [
+      "cell_id",
+      "date"
+    ],
+    "cells": [
+      "cell_id"
+    ],
+    "anomalies_region_week": [
+      "region_id",
+      "week_start"
+    ],
+    "critical_periods": [
+      "region_id",
+      "period_id"
+    ],
+    "drift_flags": [
+      "region_id",
+      "year"
+    ]
+  },
+  "detections": {
+    "sensor": "string",
+    "sat": "string",
+    "acq_date": "date32",
+    "acq_time": "int32",
+    "lat": "float64",
+    "lon": "float64",
+    "frp": "float32",
+    "conf": "float32",
+    "daynight": "string",
+    "scan": "float32",
+    "track": "float32",
+    "source_type": "int32",
+    "product_version": "string"
+  },
+  "grid_daily": {
+    "cell_id": "int32",
+    "date": "date32",
+    "sat": "string",
+    "sensor": "string",
+    "n_det": "int32",
+    "n_hiconf": "int32",
+    "frp_sum": "float32",
+    "frp_max": "float32",
+    "n_day": "int32",
+    "n_night": "int32",
+    "mean_scan": "float32"
+  },
+  "cells": {
+    "cell_id": "int32",
+    "lat_c": "float32",
+    "lon_c": "float32",
+    "landcover_dom": "string",
+    "cropland_frac": "float32",
+    "forest_frac": "float32",
+    "admin1_id": "string",
+    "admin1_name": "string",
+    "country": "string"
+  },
+  "harmonized": {
+    "cell_id": "int32",
+    "date": "date32",
+    "value_count": "float32",
+    "value_frp": "float32",
+    "modeled_count": "float32",
+    "lo_count": "float32",
+    "hi_count": "float32",
+    "level": "float32",
+    "source": "string",
+    "drift_flag": "bool",
+    "method_version": "string"
+  },
+  "predictions_oof": {
+    "cell_id": "int32",
+    "date": "date32",
+    "y_true_count": "float32",
+    "y_pred_count": "float32",
+    "y_true_frp": "float32",
+    "y_pred_frp": "float32",
+    "fold": "int32",
+    "block_id": "int32",
+    "split": "string",
+    "sat_combo": "string"
+  },
+  "drift_flags": {
+    "region_id": "string",
+    "year": "int32",
+    "drift_flag": "bool",
+    "reason": "string"
+  },
+  "anomalies_region_week": {
+    "region_id": "string",
+    "week_start": "date32",
+    "value": "float32",
+    "baseline": "float32",
+    "score": "float32",
+    "flag": "bool",
+    "exceeds_lower_bound": "bool",
+    "severity": "float32",
+    "depends_on_modeled_history": "bool"
+  },
+  "critical_periods": {
+    "region_id": "string",
+    "period_id": "int32",
+    "start": "date32",
+    "end": "date32",
+    "severity": "float32",
+    "rank": "int32",
+    "peak_value": "float32",
+    "agri_tag": "bool",
+    "n_weeks": "int32",
+    "agri_share": "float32",
+    "depends_on_modeled_history": "bool"
+  },
+  "sensor_days": {
+    "date": "date32",
+    "sat": "string",
+    "operating": "bool",
+    "note": "string"
+  },
+  "coverage_days": {
+    "sat": "string",
+    "region": "string",
+    "date": "date32",
+    "overlap_D": "float32",
+    "overlap_N": "float32",
+    "event_ids": "string",
+    "verification": "string"
+  }
+}
