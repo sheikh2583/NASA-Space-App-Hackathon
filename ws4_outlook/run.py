@@ -64,14 +64,14 @@ def _daily_oof(oof):
     return conformal.daily_oof(oof, grid)
 
 
-def step_intervals():
+def step_intervals(candidate: str = "legacy"):
     oof = pd.read_parquet(f"{P}/predictions_oof.parquet")
     cells = pd.read_parquet(f"{P}/cells.parquet")
-    table, cov = conformal.build_table(oof, cells, daily=_daily_oof(oof))
+    table, cov = conformal.build_table(oof, cells, daily=_daily_oof(oof), candidate=candidate)
     with open(f"{P}/interval_table.json", "w") as f:
         json.dump(table, f, indent=1)
     allrow = [r for r in cov["coverage"] if r["landcover"] == "all"]
-    print(f"interval_table v1: {len(table['entries'])} entries; test coverage {[(r['res'], r['coverage']) for r in allrow]}")
+    print(f"interval_table {table['version']} ({candidate}): {len(table['entries'])} entries; test coverage {[(r['res'], r.get('sat_combo'), r['coverage']) for r in allrow]}")
     piece("intervals", cov, [
         "Calibrated on 2012 onward (where SNPP observations exist); coverage before 2012 is not guaranteed.",
         "Coverage is measured on randomly drawn rectangles in held-out test blocks; very large or unusual areas may differ.",
@@ -148,13 +148,20 @@ def step_outlook(status_only=False):
         "Built on SYNTHETIC data; rerun on real data before quoting."])
 
 
-def main(command=None):
-    command = command or sys.argv[1]
+def main(argv=None):
+    import argparse
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("command", choices=["intervals", "interval_report", "drift", "outlook", "outlook_status"])
+    parser.add_argument("--interval-candidate", choices=["legacy", "combo", "combo_zero"], default="legacy")
+    args = parser.parse_args(argv)
+    command = args.command
     if command in {'drift', 'outlook'}:
         compute.configure_cuda_training()
-    {"intervals": step_intervals, "interval_report": step_interval_report,
-     "outlook_status": lambda: step_outlook(status_only=True),
-     "drift": step_drift, "outlook": step_outlook}[command]()
+    if command == "intervals":
+        step_intervals(candidate=args.interval_candidate)
+    else:
+        {"interval_report": step_interval_report, "outlook_status": lambda: step_outlook(status_only=True),
+         "drift": step_drift, "outlook": step_outlook}[command]()
 
 
 if __name__ == "__main__":

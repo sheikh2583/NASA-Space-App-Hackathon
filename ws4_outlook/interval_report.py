@@ -75,7 +75,7 @@ def report(oof: pd.DataFrame, cells: pd.DataFrame, table: dict, n: int = 4000, s
             strata = [(f"landcover:{lc}|season:{season}",) for lc, season in
                       zip(samples["landcover"], samples["season"])]
             samples["lo"], samples["hi"] = apply_interval_many(
-                samples["pred"].to_numpy(), strata, res, table
+                samples["pred"].to_numpy(), strata, res, table, sat_combo=sat_combo
             )
             samples["magnitude_stratum"] = _magnitude_labels(samples["y"])
 

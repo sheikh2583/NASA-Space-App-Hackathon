@@ -158,44 +158,81 @@ def _bin_of(pred):
 
 
 def _conformal_q(scores: np.ndarray) -> float:
+    scores = np.asarray(scores, dtype="float64")
+    if scores.size == 0 or not np.isfinite(scores).all():
+        raise ValueError("conformal scores must be a non-empty finite vector")
     n = scores.size
     k = min(n, int(np.ceil((n + 1) * LEVEL)))
     return float(np.sort(scores)[k - 1])
 
 
+MIN_ZERO_PREDICTION_SUPPORT = 30
+
+
+def _zero_prediction_fallback(cal: pd.DataFrame, min_support: int = MIN_ZERO_PREDICTION_SUPPORT) -> dict:
+    """Calibrate an upper additive allowance using only calibration draws predicted at zero."""
+    zero = cal[(cal["pred"] <= 0) & np.isfinite(cal["y"]) & np.isfinite(cal["pred"])]
+    if len(zero) < min_support:
+        return {"n": int(len(zero)), "status": "sparse_fallback", "hi_add": None}
+    scores = np.abs(np.log((zero["y"].to_numpy(dtype="float64") + 1) /
+                           (zero["pred"].to_numpy(dtype="float64") + 1)))
+    q = _conformal_q(scores)
+    return {"n": int(len(zero)), "status": "fitted", "hi_add": float(np.exp(q) - 1)}
+
+
 def build_table(oof: pd.DataFrame, cells: pd.DataFrame, n_samples: int = 6000, seed: int = 1,
-                daily: pd.DataFrame | None = None) -> tuple[dict, dict]:
+                daily: pd.DataFrame | None = None, candidate: str = "legacy") -> tuple[dict, dict]:
+    """Build the frozen shared table or a preregistered combo/zero candidate from calibration OOF only.
+
+    Candidates: ``legacy`` preserves the saved Terra+Aqua calibration behavior; ``combo`` fits a
+    separate table for each MODIS input combination; ``combo_zero`` adds a prediction-time zero
+    prediction upper allowance when its calibration support reaches MIN_ZERO_PREDICTION_SUPPORT.
+    """
+    if candidate not in {"legacy", "combo", "combo_zero"}:
+        raise ValueError("candidate must be legacy, combo or combo_zero")
     rng = np.random.default_rng(seed)
-    entries, cover_rows = [], []
+    entries, cover_rows, zero_support = [], [], []
+    combos = ("terra_aqua",) if candidate == "legacy" else ("terra_aqua", "terra_only")
     for res in ("week", "month"):
-        cal = _aggregate_samples(oof, cells, "calib", n_samples, res, rng, daily=daily)
-        test = _aggregate_samples(oof, cells, "test", n_samples // 2, res, rng, daily=daily)
-        cal["bin"] = _bin_of(cal["pred"].values)
-        groups = [("all", cal)] + [(f"landcover:{lc}|season:{s}", g) for (lc, s), g in cal.groupby(["landcover", "season"])]
-        for stratum, g in groups:
-            for b, gb in g.groupby("bin"):
-                if len(gb) < 30:
-                    continue
-                q = _conformal_q(gb["score"].values)
-                # Exact lower bound is (pred + 1) e^-q - 1; the contract has no additive lower term, so take the
-                # multiplier that stays below it over the whole bin (its value at the bin's lower edge; 0 for the first bin).
-                lower_edge = ([0.0] + [x for x in BINS if x is not None])[int(b)]
-                lo_mult = max(0.0, np.exp(-q) + (np.exp(-q) - 1) / lower_edge) if lower_edge > 0 else 0.0
-                entries.append({"res": res, "stratum": stratum, "max_value": BINS[int(b)],
-                                "lo_mult": round(float(lo_mult), 4), "hi_mult": round(float(np.exp(q)), 4),
-                                "hi_add": round(float(np.exp(q) - 1), 4)})
-        table = {"version": "v1-conformal", "level": LEVEL, "entries": entries}
-        strata = [(f"landcover:{lc}|season:{s}",) for lc, s in zip(test["landcover"], test["season"])]
-        lo, hi = apply_interval_many(test["pred"].values, strata, res, table)
-        test["lo"], test["hi"] = lo, hi
-        for (lc, s), g in test.groupby(["landcover", "season"]):
-            cover_rows.append({"res": res, "landcover": lc, "season": s, "n": int(len(g)),
-                               "coverage": round(metrics.coverage(g["y"], g["lo"], g["hi"]), 3),
-                               "mean_width": round(float((g["hi"] - g["lo"]).mean()), 2),
-                               "interval_score": round(metrics.interval_score(g["y"], g["lo"], g["hi"], 1 - LEVEL), 2)})
-        cover_rows.append({"res": res, "landcover": "all", "season": "all", "n": int(len(test)),
-                           "coverage": round(metrics.coverage(test["y"], test["lo"], test["hi"]), 3),
-                           "mean_width": round(float((test["hi"] - test["lo"]).mean()), 2),
-                           "interval_score": round(metrics.interval_score(test["y"], test["lo"], test["hi"], 1 - LEVEL), 2)})
-    return ({"version": "v1-conformal", "level": LEVEL, "entries": entries},
-            {"coverage": cover_rows, "nominal": LEVEL, "month_target": month_target(daily)})
+        for combo in combos:
+            cal = _aggregate_samples(oof, cells, "calib", n_samples, res, rng, sat_combo=combo, daily=daily)
+            test = _aggregate_samples(oof, cells, "test", n_samples // 2, res, rng, sat_combo=combo, daily=daily)
+            cal["bin"] = _bin_of(cal["pred"].values)
+            groups = [("all", cal)] + [(f"landcover:{lc}|season:{s}", g)
+                                        for (lc, s), g in cal.groupby(["landcover", "season"])]
+            prefix = f"input:{combo}|" if candidate != "legacy" else ""
+            for stratum, group in groups:
+                for b, bucket in group.groupby("bin"):
+                    if len(bucket) < 30:
+                        continue
+                    q = _conformal_q(bucket["score"].values)
+                    lower_edge = ([0.0] + [x for x in BINS if x is not None])[int(b)]
+                    lo_mult = max(0.0, np.exp(-q) + (np.exp(-q) - 1) / lower_edge) if lower_edge > 0 else 0.0
+                    entries.append({"res": res, "stratum": prefix + stratum, "max_value": BINS[int(b)],
+                                    "lo_mult": round(float(lo_mult), 4), "hi_mult": round(float(np.exp(q)), 4),
+                                    "hi_add": round(float(np.exp(q) - 1), 4)})
+            if candidate == "combo_zero":
+                zero = _zero_prediction_fallback(cal)
+                zero_support.append({"res": res, "sat_combo": combo, **zero})
+                if zero["status"] == "fitted":
+                    entries.append({"res": res, "stratum": prefix + "zero_prediction", "max_value": None,
+                                    "lo_mult": 0.0, "hi_mult": 1.0, "hi_add": round(zero["hi_add"], 4)})
+            table = {"version": {"legacy": "v1-conformal", "combo": "v2-conformal-combo",
+                                 "combo_zero": "v2-conformal-combo-zero"}[candidate],
+                     "level": LEVEL, "entries": entries}
+            strata = [(f"landcover:{lc}|season:{s}",) for lc, s in zip(test["landcover"], test["season"])]
+            lo, hi = apply_interval_many(test["pred"].values, strata, res, table, sat_combo=combo)
+            test["lo"], test["hi"] = lo, hi
+            for (lc, s), group in test.groupby(["landcover", "season"]):
+                cover_rows.append({"res": res, "sat_combo": combo, "landcover": lc, "season": s, "n": int(len(group)),
+                                   "coverage": round(metrics.coverage(group["y"], group["lo"], group["hi"]), 3),
+                                   "mean_width": round(float((group["hi"] - group["lo"]).mean()), 2),
+                                   "interval_score": round(metrics.interval_score(group["y"], group["lo"], group["hi"], 1 - LEVEL), 2)})
+            cover_rows.append({"res": res, "sat_combo": combo, "landcover": "all", "season": "all", "n": int(len(test)),
+                               "coverage": round(metrics.coverage(test["y"], test["lo"], test["hi"]), 3),
+                               "mean_width": round(float((test["hi"] - test["lo"]).mean()), 2),
+                               "interval_score": round(metrics.interval_score(test["y"], test["lo"], test["hi"], 1 - LEVEL), 2)})
+    version = {"legacy": "v1-conformal", "combo": "v2-conformal-combo", "combo_zero": "v2-conformal-combo-zero"}[candidate]
+    return ({"version": version, "level": LEVEL, "candidate": candidate, "entries": entries},
+            {"coverage": cover_rows, "nominal": LEVEL, "month_target": month_target(daily),
+             "candidate": candidate, "zero_prediction_support": zero_support})

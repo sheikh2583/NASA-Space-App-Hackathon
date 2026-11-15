@@ -41,6 +41,8 @@ Test calendar allocation across leap days and month/year boundaries; verify dail
 
 After diagnosis, register at most two interval repair candidates in the run appendix before evaluation. Prefer a minimal mechanism supported by the failure analysis, such as explicit MODIS-combination/predicted-magnitude conditioning, an appropriate zero-sensitive score, or documented sparse-group fallbacks. Record the exact choice, score, strata and fitting data.
 
+**T54/T55 registered candidate configurations:** `legacy` reproduces the current shared Terra+Aqua calibration; `combo` fits independent Terra+Aqua and Terra-only calibration entries on the same calibration OOF role; `combo_zero` adds a prediction-time zero-prediction additive upper fallback. The fallback is fitted only when at least 30 calibration rectangle draws have zero prediction, uses the finite-sample 0.90 quantile, and otherwise falls back to the combination/resolution's ordinary calibration entry. No truth-positive label is used for deployment selection. These configurations are screens for T56, not accepted repairs.
+
 Deployment strata may use only information available at prediction time. Truth-positive and truth-magnitude groups remain mandatory diagnostics, not a deployable oracle grouping. Never recalibrate on inspected test outcomes or widen intervals repeatedly until a favorable test score appears.
 
 Preserve fit/calibration/evaluation roles, deterministic seeds and finite-sample quantile semantics where applicable. For dependence or nonexchangeability, explain the limitation rather than citing a guarantee the implementation does not possess. [Conditional-coverage research](https://arxiv.org/abs/2305.12616) distinguishes restricted targets from universal finite-sample guarantees.

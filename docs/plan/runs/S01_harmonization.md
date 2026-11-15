@@ -21,7 +21,7 @@ See the frozen measured inventory and binding choices in [EVALUATION_PROTOCOL.md
 1. Compare the saved shared calibration against a Terra+Aqua and Terra-only calibration split, using only the registered calibration OOF role. The diagnostic shows the existing table has no input-combination key and `build_table` samples Terra+Aqua by default, while the same table is reported against both combinations.
 2. Screen a prediction-time zero-prediction additive fallback calibrated only on the calibration role. Do not condition deployment on truth-positive membership; the zero-prediction/positive-truth group is diagnostic evidence only.
 
-Both are development candidates for T55, not accepted repairs. Preserve B1/current table, use identical evaluation rows, and retain the registered stop/support criteria.
+Both are development candidates for T55, not accepted repairs. Preserve B1/current table, use identical evaluation rows, and retain the registered stop/support criteria. T55 exposes deterministic configs through `python -m ws4_outlook.run intervals --interval-candidate legacy|combo|combo_zero`; `legacy` remains the default and writes the frozen shared baseline behavior. T56 must run and compare `legacy`, `combo`, and `combo_zero` from separate fresh outputs under the same fit/calibration/evaluation roles, without editing parameters between trials.
 
 ## Command sequence
 
