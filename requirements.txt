@@ -1,0 +1,31 @@
+# Python 3.11. Exact versions are in requirements.lock.txt (pip install -r requirements.lock.txt).
+# After changing this file: pip install -r requirements.txt, then pip freeze > requirements.lock.txt and commit both.
+# pandas is held below 3: pandas 3 changes copy-on-write and string defaults, and most AI tools still write pandas 2 code.
+pandas>=2.2,<3
+pyarrow
+duckdb
+numpy
+scipy
+scikit-learn
+lightgbm
+statsmodels
+shapely
+geopandas
+# Rasters: land cover (MCD12C1 is HDF4; the rasterio wheel has no HDF4 driver, so read it with pyhdf),
+# CHIRPS rainfall (GeoTIFF or NetCDF).
+pyhdf
+rasterio
+xarray
+rioxarray
+netCDF4
+requests
+fastapi
+uvicorn
+pydantic
+pyyaml
+jsonschema
+# Contract tests: validate the spec and responses against contracts/openapi.yaml.
+openapi-spec-validator
+openapi-schema-validator
+pytest
+httpx
