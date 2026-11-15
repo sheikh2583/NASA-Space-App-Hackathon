@@ -72,6 +72,6 @@ Use plan.py board --fix for structural columns and plan.py set for status/notes.
 | T29 | agent | Draft the submission text, slide content and video script from measured numbers | Samiul | T28 | todo |  |
 | T35 | agent | Submission assets (slides page, recorded story video) and a 13 Nov rules re-check | Samiul | T29, T30 | todo |  |
 | T63 | agent | Reassess readiness against the challenge and final evidence | Samiul | T28, T35, T34, T62, H06, T24 | todo | Installed scaffold; implementation and acceptance not yet performed. |
-| T64 | agent | Make area comparison results visible and actionable | Sheikh | – | review | Compare feedback and date alignment implemented; CHECK-PLAN and CHECK-WEB passed (59 frontend tests, strings and production build). Live compare API returned aligned points for both areas. |
+| T64 | agent | Make area comparison results visible and actionable | Sheikh | – | done | Compare loading/success/error feedback and date-keyed chart alignment deployed. CHECK-PLAN/CHECK-WEB passed; Render check_render.py passed for 79ab633 with matching served revision. |
 | H04 | human | Sheikh: submit on the Space Apps site | Sheikh | T35, T63 | todo |  |
 | H05 | human | Sheikh: event days (14-15 Nov) | Sheikh | H04 | todo |  |
