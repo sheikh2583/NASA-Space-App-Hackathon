@@ -6,12 +6,14 @@ Usage: python -m ws6_validation.qa [--api-base-url URL]
 from __future__ import annotations
 
 import argparse
+import hashlib
 import datetime as dt
 import json
 import os
 import re
 import subprocess
 import sys
+import subprocess
 
 import pandas as pd
 
@@ -116,8 +118,24 @@ def main(argv=None):
     ]
     if not real_data:
         limitations.insert(0, "Synthetic data: the checks prove the pipeline and contracts, not real-world accuracy.")
+    qa_inputs = ["harmonized.parquet", "cells.parquet", "sensor_days.parquet", "interval_table.json",
+                 "validation/intervals_by_stratum.json", "validation/harmonization.json"]
+    input_hashes = {}
+    for name in qa_inputs:
+        path = f"{P}/{name}"
+        if os.path.isfile(path):
+            digest = hashlib.sha256()
+            with open(path, "rb") as artifact:
+                for chunk in iter(lambda: artifact.read(1024 * 1024), b""):
+                    digest.update(chunk)
+            input_hashes[name] = digest.hexdigest()
+    revision = os.environ.get("SOURCE_REVISION")
+    if not revision:
+        r = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True)
+        revision = r.stdout.strip() if r.returncode == 0 else None
     piece = {"schema_version": "1.0", "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
-             "producer": "qa", "metrics": {"summary": summary, "checks": checks, "scientific_acceptance": {"intervals": acceptance},
+             "producer": "qa", "provenance": {"producer_revision": revision, "input_hashes": input_hashes},
+             "metrics": {"summary": summary, "checks": checks, "scientific_acceptance": {"intervals": acceptance},
                                                      "seam_flag_rates": fr, "planted_anomalies": pl},
              "limitations": limitations}
     os.makedirs(f"{P}/validation", exist_ok=True)

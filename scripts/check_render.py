@@ -4,7 +4,8 @@
     python scripts/check_render.py --url https://x.onrender.com --commit <sha>
 
 Checks /health (status, cells, data_through = deployment/runtime.json), /version.json (commit = --commit, default
-`git rev-parse HEAD`; mode live-api), / (the web app), POST /aoi/summary (a small Bangladesh request) and /docs.
+`git rev-parse HEAD`; mode live-api), / (the web app), POST /aoi/summary (a small Bangladesh request), /docs and
+/meta/validation runtime evidence against the serving revision.
 The first request retries up to 6 times, 15 s apart, because a free Render service sleeps after 15 idle minutes.
 Exit code 0 only when every check passes. Nothing from .env is printed except RENDER_URL. Standard library only.
 """
@@ -56,7 +57,21 @@ def head_commit() -> str:
     return r.stdout.strip()
 
 
-def check(url: str, commit: str, data_through: str, sleep=time.sleep, out=print) -> bool:
+def check_runtime_evidence(url: str, commit: str) -> tuple[bool, str]:
+    status, text = http("GET", f"{url}/meta/validation")
+    try:
+        evidence = json.loads(text).get("runtime_evidence", {}) if status == 200 else {}
+        valid = (evidence.get("status") in {"accepted_for_scope", "limited", "stop_condition",
+                                              "insufficient_support", "missing", "incompatible"}
+                 and evidence.get("disposition") in {"accepted", "limited-research-demo"}
+                 and evidence.get("serving_revision") == commit)
+    except (json.JSONDecodeError, AttributeError):
+        evidence, valid = {}, False
+    return valid, f"HTTP {status}, status={evidence.get('status')!r}, serving_revision={evidence.get('serving_revision')!r}"
+
+
+def check(url: str, commit: str, data_through: str, sleep=time.sleep, out=print,
+          verify_evidence: bool = False) -> bool:
     results = []
 
     def report(name: str, ok: bool, measured: str):
@@ -103,6 +118,9 @@ def check(url: str, commit: str, data_through: str, sleep=time.sleep, out=print)
 
     status, _ = http("GET", f"{url}/docs")
     report("/docs", status == 200, f"HTTP {status}")
+    if verify_evidence:
+        evidence_ok, detail = check_runtime_evidence(url, commit)
+        report("/meta/validation runtime evidence", evidence_ok, detail)
     ok = all(results)
     out(f"\n{'ALL CHECKS PASSED' if ok else 'SOME CHECKS FAILED'} for {url}")
     return ok
@@ -119,7 +137,7 @@ def main(argv=None) -> int:
         return 2
     manifest = json.loads((ROOT / "deployment/runtime.json").read_text(encoding="utf-8"))
     print(f"Checking {url}")
-    return 0 if check(url, a.commit or head_commit(), manifest["data_through"]) else 1
+    return 0 if check(url, a.commit or head_commit(), manifest["data_through"], verify_evidence=True) else 1
 
 
 if __name__ == "__main__":

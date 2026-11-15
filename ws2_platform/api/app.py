@@ -15,6 +15,7 @@ from collections import OrderedDict
 from concurrent.futures import Future
 from threading import Lock
 from typing import Literal, Optional
+from pathlib import PurePosixPath
 
 import numpy as np
 import pandas as pd
@@ -23,6 +24,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field, model_validator
 
+from common.acceptance import evaluate_runtime_evidence, legacy_runtime_disposition
 from ws2_platform.api.query import AOIError, Store, cell_set_key
 from ws3_anomaly.anomaly import score_series
 from ws3_anomaly.periods import find_periods
@@ -41,6 +43,11 @@ _cache: "OrderedDict[str, dict]" = OrderedDict()
 _cache_lock = Lock()
 _store_lock = Lock()
 _inflight: dict[str, Future] = {}
+_evidence_cache: dict[tuple, dict[str, str]] = {}
+_RUNTIME_MEMBERS = {"cells.parquet", "harmonized.parquet", "sensor_days.parquet", "interval_table.json",
+                    "drivers_region.json", "outlook_region.json", "validation/harmonization.json",
+                    "validation/intervals.json", "validation/drift.json", "validation/outlook_skill.json",
+                    "validation/qa.json", "validation/intervals_by_stratum.json"}
 
 
 def store() -> Store:
@@ -310,6 +317,42 @@ def _reject_nonfinite(token: str):
     raise ValueError(f"non-finite value {token} in validation piece")
 
 
+def _runtime_hashes(data_dir: str, evidence: dict) -> dict[str, str] | None:
+    """Hash the allowlisted files named by the runtime record, caching by size and mtime."""
+    names = evidence.get("member_hashes")
+    if not isinstance(names, dict):
+        return {}
+    if set(names) != _RUNTIME_MEMBERS:
+        return {}
+    paths, signature = [], []
+    for name in sorted(names):
+        if name not in _RUNTIME_MEMBERS:
+            return None
+        rel = PurePosixPath(name)
+        if rel.is_absolute() or ".." in rel.parts or "\\" in name:
+            return None
+        path = os.path.join(data_dir, *rel.parts)
+        try:
+            stat = os.stat(path)
+        except OSError:
+            return None
+        paths.append((name, path))
+        signature.append((name, stat.st_size, stat.st_mtime_ns))
+    key = (os.path.realpath(data_dir), tuple(signature))
+    if key in _evidence_cache:
+        return _evidence_cache[key]
+    result = {}
+    for name, path in paths:
+        digest = hashlib.sha256()
+        with open(path, "rb") as artifact:
+            for chunk in iter(lambda: artifact.read(1024 * 1024), b""):
+                digest.update(chunk)
+        result[name] = digest.hexdigest()
+    _evidence_cache.clear()
+    _evidence_cache[key] = result
+    return result
+
+
 @app.get("/meta/validation")
 def meta_validation():
     d = os.path.join(store().data_dir, "validation")
@@ -321,8 +364,16 @@ def meta_validation():
             pieces[v.get("producer", os.path.basename(p)[:-5])] = v
         except (OSError, ValueError, AttributeError, TypeError):  # report broken pieces without hiding healthy ones
             corrupt.append(os.path.basename(p))
+    evidence_path = os.path.join(store().data_dir, "runtime_evidence.json")
+    try:
+        with open(evidence_path, encoding="utf-8") as stream:
+            evidence = json.load(stream, parse_constant=_reject_nonfinite)
+            runtime_evidence = evaluate_runtime_evidence(evidence, _runtime_hashes(store().data_dir, evidence))
+    except (OSError, ValueError, TypeError):
+        runtime_evidence = legacy_runtime_disposition()
+    runtime_evidence["serving_revision"] = os.environ.get("RENDER_GIT_COMMIT", "local")
     return {**envelope(), "pieces": pieces, "missing": [x for x in EXPECTED_PIECES if x not in pieces],
-            "corrupt": corrupt}
+            "corrupt": corrupt, "runtime_evidence": runtime_evidence}
 
 
 @app.post("/export")

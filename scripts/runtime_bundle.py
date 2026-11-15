@@ -9,6 +9,8 @@ import tempfile
 import urllib.request
 import zipfile
 
+from common.acceptance import evaluate_runtime_evidence, interval_status
+
 ROOT = Path(__file__).resolve().parents[1]
 REQUIRED = {'cells.parquet', 'harmonized.parquet', 'sensor_days.parquet',
             'interval_table.json', 'drivers_region.json', 'outlook_region.json'}
@@ -16,6 +18,8 @@ VALIDATION = {'validation/harmonization.json', 'validation/intervals.json',
               'validation/drift.json', 'validation/outlook_skill.json', 'validation/qa.json'}
 LEGACY_NAMES = REQUIRED | VALIDATION
 VALIDATION = VALIDATION | {'validation/intervals_by_stratum.json'}
+EVIDENCE = 'runtime_evidence.json'
+NEW_NAMES = REQUIRED | VALIDATION | {EVIDENCE}
 MAX_BYTES = 64 * 1024 * 1024
 
 
@@ -28,6 +32,45 @@ def validate_saved_outputs(read):
         raise ValueError('Runtime bundle requires existing passing QA')
 
 
+def _sha256(payload: bytes) -> str:
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _runtime_evidence(read, names: set[str]) -> dict:
+    hashes = {name: _sha256(read(name)) for name in sorted(names)}
+    intervals = {}
+    provenance, producers = {}, {}
+    for name in sorted(names):
+        if not name.startswith('validation/') or not name.endswith('.json'):
+            continue
+        try:
+            piece = json.loads(read(name))
+        except (ValueError, TypeError):
+            continue
+        producer = piece.get('producer', name.rsplit('/', 1)[-1][:-5])
+        producers[producer] = {'generated_at': piece.get('generated_at'),
+                               'provenance': piece.get('provenance')}
+        if piece.get('provenance'):
+            provenance[producer] = piece['provenance']
+    try:
+        intervals = json.loads(read('validation/intervals_by_stratum.json'))
+        acceptance = interval_status(intervals)
+    except (KeyError, ValueError, TypeError):
+        acceptance = {'status': 'missing', 'reasons': ['stratified interval evidence is missing or corrupt'], 'stop_rows': []}
+    status = acceptance['status']
+    harmonization = json.loads(read('validation/harmonization.json'))
+    return {'schema_version': '1.0', 'status': status, 'disposition': 'limited-research-demo',
+            'scope': ['historical-area-summary', 'interval-evidence:' + status],
+            'producer_revision': (provenance.get('harmonization') or {}).get('producer_revision'),
+            'producer_evidence': producers,
+            'method': harmonization.get('metrics', {}).get('method_chosen'),
+            'run_identity': harmonization.get('run_id') or harmonization.get('generated_at'),
+            'member_hashes': hashes, 'scientific_acceptance': {'interval_report': intervals.get('metrics', {}),
+                                                               'recomputed': acceptance},
+            'limitations': ['Producer revision is unknown for the saved runtime artifacts.',
+                            'This release is a limited research demo; it does not claim accepted interval support.']}
+
+
 def pack(data: Path, output: Path) -> str:
     names = sorted(REQUIRED | VALIDATION)
     for name in names:
@@ -35,11 +78,15 @@ def pack(data: Path, output: Path) -> str:
             raise ValueError(f'Missing runtime artifact: {name}')
     validate_saved_outputs(lambda name: (data / name).read_bytes())
     output.parent.mkdir(parents=True, exist_ok=True)
+    evidence = _runtime_evidence(lambda name: (data / name).read_bytes(), set(names))
     with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as package:
         for name in names:
             entry = zipfile.ZipInfo(name, date_time=(2026, 1, 1, 0, 0, 0))
             entry.compress_type = zipfile.ZIP_DEFLATED
             package.writestr(entry, (data / name).read_bytes())
+        entry = zipfile.ZipInfo(EVIDENCE, date_time=(2026, 1, 1, 0, 0, 0))
+        entry.compress_type = zipfile.ZIP_DEFLATED
+        package.writestr(entry, json.dumps(evidence, sort_keys=True, separators=(',', ':')))
     return hashlib.sha256(output.read_bytes()).hexdigest()
 
 
@@ -49,7 +96,7 @@ def validate_archive(archive: Path) -> tuple[str, ...]:
         raise ValueError('Runtime archive is too large')
     with zipfile.ZipFile(archive) as package:
         names = package.namelist()
-        if len(names) != len(set(names)) or set(names) not in (LEGACY_NAMES, REQUIRED | VALIDATION):
+        if len(names) != len(set(names)) or set(names) not in (LEGACY_NAMES, REQUIRED | VALIDATION, NEW_NAMES):
             raise ValueError('Runtime archive has missing, duplicate, or unexpected files')
         if sum(info.file_size for info in package.infolist()) > MAX_BYTES:
             raise ValueError('Expanded runtime archive is too large')
@@ -58,6 +105,12 @@ def validate_archive(archive: Path) -> tuple[str, ...]:
             if path.is_absolute() or '..' in path.parts or '\\' in name:
                 raise ValueError('Unsafe runtime archive path')
         validate_saved_outputs(package.read)
+        if EVIDENCE in names:
+            evidence = json.loads(package.read(EVIDENCE))
+            member_hashes = {name: _sha256(package.read(name)) for name in sorted(set(names) - {EVIDENCE})}
+            result = evaluate_runtime_evidence(evidence, member_hashes)
+            if result['status'] == 'incompatible' and result['reasons']:
+                raise ValueError('Runtime evidence is incompatible: ' + '; '.join(result['reasons']))
         return tuple(names)
 
 

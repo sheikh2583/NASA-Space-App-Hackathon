@@ -41,6 +41,9 @@ def validate_release_archive(zip_path: Path, data_through: str) -> str:
 
     validate_archive(zip_path)
     with zipfile.ZipFile(zip_path) as package:
+        if "runtime_evidence.json" in package.namelist():
+            evidence = json.loads(package.read("runtime_evidence.json"))
+            print(f"Runtime scientific disposition: {evidence.get('status')} ({evidence.get('disposition')})")
         dates = pq.read_table(io.BytesIO(package.read("sensor_days.parquet")), columns=["date"])["date"].to_pylist()
     if not dates or any(not isinstance(value, dt.date) for value in dates):
         raise ValueError("Runtime sensor_days must contain non-null dates")
@@ -125,7 +128,7 @@ def main(argv=None) -> int:
     validate_release_archive(a.zip, a.data_through)
     tag = a.tag or default_tag(dt.date.today(), existing_tags(manifest))
     new = plan_release(manifest, a.zip, tag, a.data_through)
-    notes = f"{a.data_through}; packaged from validated outputs; no training"
+    notes = f"{a.data_through}; packaged from validated outputs; no training; scientific disposition is recorded in runtime_evidence.json"
     create = ["gh", "release", "create", tag, str(a.zip), "--repo", repo, "--title", tag, "--notes", notes]
 
     print("New deployment/runtime.json:\n" + json.dumps(new, indent=2))

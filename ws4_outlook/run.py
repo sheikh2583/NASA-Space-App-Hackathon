@@ -11,6 +11,8 @@ import json
 import os
 import sys
 import glob
+import hashlib
+import subprocess
 
 import numpy as np
 import pandas as pd
@@ -34,8 +36,26 @@ def piece(producer, metrics, limitations):
         if real:
             limitations = [text.replace("Built on SYNTHETIC data; rerun on real data before quoting.",
                                          "Computed from downloaded FIRMS observations.") for text in limitations]
-        json.dump({"schema_version": "1.0", "generated_at": NOW(), "producer": producer, "metrics": metrics,
-                   "limitations": limitations}, f, indent=1)
+        inputs = {"intervals": ["predictions_oof.parquet", "cells.parquet", "grid_daily.parquet"],
+                  "intervals_by_stratum": ["predictions_oof.parquet", "cells.parquet", "grid_daily.parquet", "interval_table.json"],
+                  "drift": ["harmonized.parquet", "cells.parquet", "sensor_days.parquet"],
+                  "outlook_skill": ["harmonized.parquet", "cells.parquet", "sensor_days.parquet", "interval_table.json"]}.get(producer, [])
+        hashes = {}
+        for name in inputs:
+            path = f"{P}/{name}"
+            if os.path.isfile(path):
+                digest = hashlib.sha256()
+                with open(path, "rb") as artifact:
+                    for chunk in iter(lambda: artifact.read(1024 * 1024), b""):
+                        digest.update(chunk)
+                hashes[name] = digest.hexdigest()
+        revision = os.environ.get("SOURCE_REVISION")
+        if not revision:
+            r = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True)
+            revision = r.stdout.strip() if r.returncode == 0 else None
+        json.dump({"schema_version": "1.0", "generated_at": NOW(), "producer": producer,
+                   "provenance": {"producer_revision": revision, "input_hashes": hashes},
+                   "metrics": metrics, "limitations": limitations}, f, indent=1)
 
 
 def _daily_oof(oof):

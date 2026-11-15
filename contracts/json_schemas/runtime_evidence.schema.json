@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Runtime scientific evidence",
+  "type": "object",
+  "required": ["schema_version", "status", "disposition", "scope", "producer_revision", "member_hashes", "scientific_acceptance"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "status": {"enum": ["accepted_for_scope", "limited", "stop_condition", "insufficient_support", "missing", "incompatible"]},
+    "disposition": {"enum": ["accepted", "limited-research-demo"]},
+    "scope": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "producer_revision": {"type": ["string", "null"]},
+    "member_hashes": {"type": "object", "additionalProperties": {"type": "string", "pattern": "^[0-9a-f]{64}$"}},
+    "scientific_acceptance": {"type": "object"},
+    "limitations": {"type": "array", "items": {"type": "string"}}
+  }
+}

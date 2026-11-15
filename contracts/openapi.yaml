@@ -417,6 +417,12 @@ components:
         producer: { type: string }
         metrics: { type: object }
         limitations: { type: array, items: { type: string } }
+        provenance:
+          type: object
+          required: [producer_revision, input_hashes]
+          properties:
+            producer_revision: { type: [string, 'null'] }
+            input_hashes: { type: object, additionalProperties: { type: string, pattern: '^[0-9a-f]{64}$' } }
     ValidationResponse:
       allOf:
         - $ref: '#/components/schemas/Envelope'
@@ -434,6 +440,16 @@ components:
               type: array
               description: Basenames of validation files that could not be read as JSON pieces
               items: { type: string }
+            runtime_evidence:
+              type: object
+              required: [status, reasons, scope, disposition, serving_revision]
+              properties:
+                status: { type: string, enum: [accepted_for_scope, limited, stop_condition, insufficient_support, missing, incompatible] }
+                reasons: { type: array, items: { type: string } }
+                scope: { type: array, items: { type: string } }
+                disposition: { type: string, enum: [accepted, limited-research-demo] }
+                producer_revision: { type: [string, 'null'] }
+                serving_revision: { type: string }
     ExportRequest:
       allOf:
         - $ref: '#/components/schemas/AOIRequest'

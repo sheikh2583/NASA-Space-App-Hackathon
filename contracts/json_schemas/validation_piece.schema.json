@@ -8,6 +8,14 @@
     "generated_at": {"type": "string"},
     "producer": {"type": "string"},
     "metrics": {"type": "object"},
-    "limitations": {"type": "array", "items": {"type": "string"}}
+    "limitations": {"type": "array", "items": {"type": "string"}},
+    "provenance": {
+      "type": "object",
+      "required": ["producer_revision", "input_hashes"],
+      "properties": {
+        "producer_revision": {"type": ["string", "null"]},
+        "input_hashes": {"type": "object", "additionalProperties": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+      }
+    }
   }
 }

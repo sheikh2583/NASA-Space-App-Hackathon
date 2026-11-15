@@ -24,7 +24,7 @@ CONTRACT = json.load(open(os.path.join(ROOT, "contracts", "parquet_schemas.json"
 PA_TYPES = {"string": pa.string(), "int32": pa.int32(), "float32": pa.float32(), "float64": pa.float64(),
             "date32": pa.date32(), "bool": pa.bool_()}
 JSON_SCHEMA_FOR = {"interval_table.json": "interval_table", "drivers_region.json": "drivers_region",
-                   "outlook_region.json": "outlook_region"}
+                   "outlook_region.json": "outlook_region", "runtime_evidence.json": "runtime_evidence"}
 
 
 def arrow_schema(name: str) -> pa.Schema:
