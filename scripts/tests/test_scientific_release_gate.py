@@ -1,8 +1,18 @@
 import json
+import subprocess
+import sys
+from pathlib import Path
 
 from scripts.runtime_bundle import EVIDENCE, pack, validate_archive
 from scripts.tests.test_runtime_bundle import data_fixture
 from scripts import check_render
+
+
+def test_runtime_bundle_direct_script_imports_project_acceptance_module():
+    root = Path(__file__).resolve().parents[2]
+    result = subprocess.run([sys.executable, "scripts/runtime_bundle.py", "--help"], cwd=root,
+                            capture_output=True, text=True)
+    assert result.returncode == 0 and "Package/download existing validated" in result.stdout
 
 
 def test_new_archive_carries_explicit_limited_evidence_and_member_hashes(tmp_path):

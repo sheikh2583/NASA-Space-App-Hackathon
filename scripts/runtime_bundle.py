@@ -8,10 +8,14 @@ from pathlib import Path, PurePosixPath
 import tempfile
 import urllib.request
 import zipfile
+import sys
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from common.acceptance import evaluate_runtime_evidence, interval_status
 
-ROOT = Path(__file__).resolve().parents[1]
 REQUIRED = {'cells.parquet', 'harmonized.parquet', 'sensor_days.parquet',
             'interval_table.json', 'drivers_region.json', 'outlook_region.json'}
 VALIDATION = {'validation/harmonization.json', 'validation/intervals.json',
