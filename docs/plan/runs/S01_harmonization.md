@@ -16,7 +16,12 @@ Record hashes, sizes, cutoff and location in an ignored `results/runs/<run-id>/`
 
 ## Required preregistration appendix, frozen by T53
 
-See the frozen measured inventory and binding choices in [EVALUATION_PROTOCOL.md](../../results/EVALUATION_PROTOCOL.md). Existing T51 hashes identify the saved baseline; they do not prove producer-commit compatibility for every artifact. Candidate definitions remain pending T54 diagnosis, capped at two. No calibration repair is preregistered here.
+See the frozen measured inventory and binding choices in [EVALUATION_PROTOCOL.md](../../results/EVALUATION_PROTOCOL.md). Existing T51 hashes identify the saved baseline; they do not prove producer-commit compatibility for every artifact. Candidate definitions are frozen after T54 diagnosis in [INTERVAL_DIAGNOSIS.md](../../results/INTERVAL_DIAGNOSIS.md), capped at two:
+
+1. Compare the saved shared calibration against a Terra+Aqua and Terra-only calibration split, using only the registered calibration OOF role. The diagnostic shows the existing table has no input-combination key and `build_table` samples Terra+Aqua by default, while the same table is reported against both combinations.
+2. Screen a prediction-time zero-prediction additive fallback calibrated only on the calibration role. Do not condition deployment on truth-positive membership; the zero-prediction/positive-truth group is diagnostic evidence only.
+
+Both are development candidates for T55, not accepted repairs. Preserve B1/current table, use identical evaluation rows, and retain the registered stop/support criteria.
 
 ## Command sequence
 
