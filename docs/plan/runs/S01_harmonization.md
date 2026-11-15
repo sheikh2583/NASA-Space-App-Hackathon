@@ -47,3 +47,7 @@ Pause execution on baseline-backup failure, input mutation, wrong compute placem
 `execution.json`, input/member hashes, configuration, fit/device log, source patch, stage/command logs, all holdout tables, detailed interval report, block-aware uncertainty/support audit, forecast disposition and promotion decision stay together outside Git. T56 creates a concise sourced Markdown report in `docs/results/SCIENTIFIC_REMEDIATION.md`; raw models/OOF/calibration outputs are never committed.
 
 Record whether the run is full, quick or resumed. A resumed run can validate a scoped change but its duration is not a fresh full-run benchmark. Code/training completion and scientific acceptance are separate outcomes.
+
+## T56 execution attempt (2026-11-15)
+
+Run `scientific-20261115-173055-680104` verified the T51 backup and raw-input invariance, then stopped at the declared preparation command before fitting. The active environment was Python 3.12.4 although the project requires Python 3.11; readiness also reported missing `lightgbm`, `pyhdf`, `duckdb`, and CUDA `xgboost`. The failed command log and full run identity remain in the ignored `results/runs/scientific-20261115-173055-680104/` dossier. No fit, candidate comparison, validation, or blanket pytest ran. See [the T56 blocker report](../../results/SCIENTIFIC_REMEDIATION.md). Resume only after the supported environment is available and readiness passes.

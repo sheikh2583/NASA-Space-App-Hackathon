@@ -96,3 +96,7 @@ as the audit's `would_flip_0.25`; `coverage_days.parquet` has 216 rows.
 
 The SNPP outage of 2-6 Nov 2024 had made peak-season weeks look quiet; those days are now filled from NOAA-20 and
 labelled, and the week of 4 Nov rises by about half.
+
+## T56 attempt (2026-11-15)
+
+The registered scientific lane stopped before fitting at preparation: this PC has Python 3.12.4, while the supported training environment requires Python 3.11; readiness also reported missing `lightgbm`, `pyhdf`, `duckdb`, and CUDA `xgboost`. The T51 backup verified and raw-input hashes remained unchanged. No quick/full fit, interval comparison, QA, or pytest ran. This is an environment blocker, not a candidate result. Run dossier and exact disposition: [T56 scientific remediation report](SCIENTIFIC_REMEDIATION.md), `results/runs/scientific-20261115-173055-680104/`.

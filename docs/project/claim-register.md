@@ -47,3 +47,5 @@ Exact hashes, dates, row counts and backup/recovery locations are in the baselin
 Update a row only with attributable new evidence and preserve the prior status in its linked run report. T56 records numerical trial outcomes, T58 carries support into product wording, T28 records verified release identity, and T63 audits the final claims/rating.
 
 This register does not authorize a source/output-contract change. Use the corresponding card/spec/contract decision. A completed implementation row may still carry failed/limited scientific evidence. Missing participant observations or unavailable current resource sheets remain explicit, not inferred from other checks.
+
+**T56 execution status (2026-11-15):** the controlled comparison is blocked before fitting by the unavailable supported Python/CUDA environment. No fresh harmonization, interval, or monthly-target metrics were produced, so CL04–CL06 retain their prior evidence states. The attempted run and exact blocker are recorded in [SCIENTIFIC_REMEDIATION.md](../results/SCIENTIFIC_REMEDIATION.md) and the ignored run dossier; Render delivery verification is a separate observation.
