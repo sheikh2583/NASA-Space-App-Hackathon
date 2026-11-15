@@ -112,6 +112,10 @@ table.t { border-collapse: collapse; width: 100%; font-size: 13px; }
 table.t th, table.t td { border-bottom: 1px solid var(--line); padding: 4px 6px; text-align: left; }
 table.t td.n { text-align: right; font-variant-numeric: tabular-nums; }
 .exportrow { display: flex; gap: 8px; flex-wrap: wrap; }
+.compare-feedback { margin: 10px 0 0; font-size: 14px; line-height: 1.45; }
+.compare-feedback.success { color: #245b31; }
+.compare-feedback.error { color: #9d251d; }
+.compare-feedback.loading { color: #514840; }
 .exportrow button { border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 5px 10px; }
 .method { max-width: 72ch; }
 

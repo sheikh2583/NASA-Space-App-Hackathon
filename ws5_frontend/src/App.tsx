@@ -44,11 +44,13 @@ function useMediaQuery(query: string): boolean {
   return matches;
 }
 
-function CompareCard({ compact, areas, selectedId, value, onChange, onCompare }: {
+export function CompareCard({ compact, areas, selectedId, value, comparisonName, state, onChange, onCompare }: {
   compact: boolean;
   areas: AreaOption[];
   selectedId: string | null;
   value: string;
+  comparisonName: string;
+  state: "idle" | "loading" | "success" | "error";
   onChange: (value: string) => void;
   onCompare: () => void;
 }) {
@@ -61,11 +63,16 @@ function CompareCard({ compact, areas, selectedId, value, onChange, onCompare }:
           <option key={candidate.id} value={candidate.id}>{areaLabel(candidate, i18n.language)}</option>)}
       </select>
     </label>
-    <button className="chip" onClick={onCompare} disabled={!value || value === selectedId}>{t("compare.run")}</button>
+    <button className="chip" onClick={onCompare} disabled={!value || value === selectedId || state === "loading"}>
+      {state === "loading" ? t("compare.loading_button") : t("compare.run")}
+    </button>
   </div>;
+  const feedback = state === "idle" ? null : t(`compare.${state}`, { area: comparisonName });
+  const status = feedback && <p className={`compare-feedback ${state}`} role={state === "error" ? "alert" : "status"}
+    aria-live={state === "error" ? "assertive" : "polite"}>{feedback}</p>;
   return compact
-    ? <details className="card collapsible"><summary>{t("compare.title")}</summary>{body}</details>
-    : <section className="card"><h2>{t("compare.title")}</h2>{body}</section>;
+    ? <details className="card collapsible"><summary>{t("compare.title")}</summary>{body}{status}</details>
+    : <section className="card"><h2>{t("compare.title")}</h2>{body}{status}</section>;
 }
 
 export default function App() {
@@ -127,6 +134,8 @@ export default function App() {
   const [period, setPeriod] = useState<{ start: string; end: string; key: string } | null>(null);
   const [compareWith, setCompareWith] = useState<string>("");
   const [compare, setCompare] = useState<CompareResponse | null>(null);
+  const [compareStatus, setCompareStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [compareName, setCompareName] = useState("");
   const [copied, setCopied] = useState(false);
   const [copyFallback, setCopyFallback] = useState(false);
   const copyTimer = useRef<number | null>(null);
@@ -150,7 +159,7 @@ export default function App() {
     const current = ++generation.current;
     setStatus("loading");
     setSummary(null); setPeriods(null); setDrivers(null); setOutlook(null); setSeason(null); setCells(null); setPeriod(null);
-    setCompare(null);
+    setCompare(null); setCompareStatus("idle"); setCompareName("");
     try {
       const s = await api.post<SummaryResponse>("/aoi/summary", r, ctl.signal);
       if (ctl.signal.aborted || current !== generation.current) return;
@@ -225,8 +234,26 @@ export default function App() {
     const ctl = new AbortController();
     comparison.current = ctl;
     const current = generation.current;
-    const result = await api.post<CompareResponse>("/aoi/compare", { a: req, b: { ...analysisArea(other), start, end, res } }, ctl.signal).catch(() => null);
-    if (!ctl.signal.aborted && current === generation.current) setCompare(result);
+    setCompare(null);
+    setCompareName(areaLabel(other, i18n.language));
+    setCompareStatus("loading");
+    try {
+      const result = await api.post<CompareResponse>("/aoi/compare", { a: req, b: { ...analysisArea(other), start, end, res } }, ctl.signal);
+      if (ctl.signal.aborted || current !== generation.current) return;
+      setCompare(result);
+      setCompareStatus("success");
+    } catch {
+      if (ctl.signal.aborted || current !== generation.current) return;
+      setCompare(null);
+      setCompareStatus("error");
+    }
+  };
+  const chooseComparison = (value: string) => {
+    comparison.current?.abort();
+    setCompareWith(value);
+    setCompare(null);
+    setCompareStatus("idle");
+    setCompareName("");
   };
   const copyLink = async () => {
     setCopyFallback(false);
@@ -313,7 +340,7 @@ export default function App() {
                   <section className="card">
                     <div className="card-title"><h2>{t("chart.title")}</h2><HelpButton topic="bands" /></div>
                     <SeriesChart series={summary.series} seams={summary.seams ?? []} highlight={period}
-                                 second={compare?.b.series} />
+                                 second={compare?.b.series} secondName={compare ? compareName : undefined} />
                   </section>
                 </ErrorBoundary>
                 {periods && <ErrorBoundary><PeriodsPanel periods={periods.periods} selected={period?.key ?? null}
@@ -321,7 +348,8 @@ export default function App() {
                 {outlook && <ErrorBoundary><OutlookPanel o={outlook} /></ErrorBoundary>}
                 {drivers && <ErrorBoundary><DriversPanel d={drivers} collapsible={phone} /></ErrorBoundary>}
                 <CompareCard compact={phone} areas={areas} selectedId={selectedId} value={compareWith}
-                  onChange={setCompareWith} onCompare={() => void runCompare()} />
+                  comparisonName={compareName} state={compareStatus} onChange={chooseComparison}
+                  onCompare={() => void runCompare()} />
                 <section className="card">
                   <h2>{t("export.title")}</h2>
                   <div className="exportrow">

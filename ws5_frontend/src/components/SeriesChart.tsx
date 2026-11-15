@@ -3,24 +3,26 @@ import { useTranslation } from "react-i18next";
 import { useMemo } from "react";
 import type { SummaryPoint } from "../types";
 import { date, num } from "../lib/format";
+import { comparisonByDate } from "../lib/compare";
 
 interface Props {
   series: SummaryPoint[];
   seams: string[];
   highlight: { start: string; end: string } | null;
   second?: SummaryPoint[];
+  secondName?: string;
 }
 
 /** Value line with its 90% band; modeled years shaded; seams marked. */
-export default function SeriesChart({ series, seams, highlight, second }: Props) {
+export default function SeriesChart({ series, seams, highlight, second, secondName }: Props) {
   const { t } = useTranslation();
   // A partial period (data ends inside it) is drawn as a dot, not as a drop in the line or band.
-  const data = useMemo(() => series.map((p, i) => {
+  const data = useMemo(() => comparisonByDate(series, second).map((p) => {
     const partial = p.complete === false;
     return {
       t: p.t, value: partial ? null : p.value,
       band: !partial && p.lo !== null && p.hi !== null ? [p.lo, p.hi] : null,
-      b: second?.[i]?.value ?? undefined, drift: p.drift_flag ? p.value : undefined,
+      b: p.comparison, drift: p.drift_flag ? p.value : undefined,
       partial: partial ? p.value : undefined,
     };
   }), [series, second]);
@@ -52,7 +54,7 @@ export default function SeriesChart({ series, seams, highlight, second }: Props)
           )}
           <Area type="stepAfter" dataKey="band" name={t("chart.band")} stroke="none" fill="#e9a17f" fillOpacity={0.45} isAnimationActive={false} />
           <Line type="stepAfter" dataKey="value" name={t("chart.value")} stroke="#8c2a0c" dot={false} strokeWidth={1.4} isAnimationActive={false} />
-          {second && <Line type="stepAfter" dataKey="b" name="B" stroke="#1d5fa8" dot={false} strokeWidth={1.2} isAnimationActive={false} />}
+          {second && <Line type="stepAfter" dataKey="b" name={secondName ?? t("chart.compare_series")} stroke="#1d5fa8" dot={false} strokeWidth={1.2} isAnimationActive={false} />}
           <Line dataKey="drift" name={t("chart.drift")} stroke="none" dot={{ r: 2, fill: "#c27c0e" }} isAnimationActive={false} />
           <Line dataKey="partial" name={t("chart.partial")} stroke="none" dot={{ r: 3, fill: "#fff", stroke: "#8c2a0c", strokeWidth: 1.4 }} isAnimationActive={false} />
         </ComposedChart>
