@@ -1,0 +1,46 @@
+# Team, commit authors and path ownership for the plan tools (scripts/plan.py).
+# Ownership follows docs/project/file-ownership.md: the longest matching path prefix wins.
+# Append-only shared files go into the commit of the card's owner (see `shared`).
+
+lead: Sheikh
+pr_user: sheikh2583          # pull-request flow only: every branch is pushed and every PR opened from this account
+branch_prefix: ws1           # scripts/git/guard.py requires the PR user's prefix
+
+people:
+  Sheikh:
+    github: sheikh2583
+    slot: ws1
+    author: "Sheikh Mosheul Akbar <172627940+sheikh2583@users.noreply.github.com>"
+    owns: [ws1_harmonize/, docs/, tools/, scripts/, .github/, config/, contracts/parquet_schemas.json,
+           contracts/json_schemas/, contracts/README.md, README.md, CLAUDE.md, AGENTS.md, LICENSE, pytest.ini,
+           requirements.txt, requirements.lock.txt, .gitignore, .gitattributes, .env.example, CONTRIBUTING.md,
+           Dockerfile, .dockerignore, render.yaml, deployment/, requirements-api.txt, requirements-cuda.txt,
+           results/README.md, data/README.md]
+  Sattyam:
+    github: sssatty
+    slot: ws2
+    author: "Sohom Sattyam <143196542+sssatty@users.noreply.github.com>"
+    owns: [ws2_platform/, contracts/openapi.yaml, contracts/fixtures/]
+  Monazir:
+    github: Monajir
+    slot: ws3
+    author: "Monazir <69714814+Monajir@users.noreply.github.com>"
+    owns: [ws3_anomaly/]
+  Samin:
+    github: Samin2712
+    slot: ws4
+    author: "Samin Abdullah <175380324+Samin2712@users.noreply.github.com>"
+    owns: [ws4_outlook/, common/]
+  Shammo:
+    github: Zanasin
+    slot: ws5
+    author: "Hasin Ishraq <163707794+Zanasin@users.noreply.github.com>"
+    owns: [ws5_frontend/]
+  Samiul:
+    github: samiulislam22
+    slot: ws6
+    author: "Samiul <181465932+samiulislam22@users.noreply.github.com>"
+    owns: [ws6_validation/, docs/science/method_en.md, docs/science/method_bn.md, docs/project/slides/, docs/project/demo-script.md,
+           docs/project/qa-checklist.md, docs/project/submission-checklist.md, docs/submission/]
+
+shared: [docs/project/contract-changes.md, data/MANIFEST.md, docs/plan/STATUS.md]
